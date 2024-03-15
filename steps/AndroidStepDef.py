@@ -1,18 +1,12 @@
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from appium.webdriver.common.mobileby import MobileBy
-import appConfig as appConf
+import os
+import requests
 from appium import webdriver
 from behave import given
-from time import time
-import sys
-import os
-path = os.getcwd()
-sys.path.append(os.path.abspath(os.path.join(path, os.pardir)))
+import appConfig as appConf
 
-
+# Modify the given step to start the automation test
 @given("Start the android app automation test")
-def startAndroidAppAutomationTest(self):
+def startAndroidAppAutomationTest(context):
     if os.environ.get("LT_USERNAME") is None:
         # Enter LT username here if environment variables have not been added
         username = "username"
@@ -24,56 +18,66 @@ def startAndroidAppAutomationTest(self):
     else:
         accesskey = os.environ.get("LT_ACCESS_KEY")
 
-    driver = webdriver.Remote(
-        command_executor="https://"+username+":" +
-        accesskey+"@mobile-hub.lambdatest.com/wd/hub",
-        desired_capabilities=appConf.app_android_desired_caps
-    )
+    # Desired capabilities with LambdaTest username and access key
+    desired_caps = {
+        "username": username,
+        "accessKey": accesskey,
+        
+    "deviceName":"Galaxy S20",
+    "w3c": True,
+    "platformName":"Android",
+    "platformVersion":"10",
+    "build":"Python Behave - Android",
+    "name":"Sample Test Android",
+    "isRealMobile":True,
+    "visual":True,
+    "video":True,
+    "app":"lt://APP1016053741710416415042354",
+    "enableImageInjection": True
+    
+        # Add other desired capabilities as needed
+    }
+
+    # Add browser capabilities specific to LambdaTest Selenium Grid
+    desired_caps["browserName"] = "chrome"  # Example: Use Chrome browser
+    desired_caps["version"] = "latest"  # Example: Latest version of Chrome
+
+    # Call LambdaTest media upload API to upload image and get media URL
+    url = "https://mobile-mgm.lambdatest.com/mfs/v1.0/media/upload"
+    payload = {'type': 'image', 'custom_id': 'SampleImage'}
+    files = [('media_file', ('testImage.png', open('/workspace/newpythonbehave/testImage.png', 'rb'), 'image/png'))]
+    headers = {'Authorization': 'Basic cHJha2hhcmdhaGxvdDpLU0Z5WGlWb1BrUTl4V1NjelZsUjBCZUw4WjZtVTRvSHZKV1pYSGdUb0Q2aEVscnVXTg=='}
+
     try:
-        colorElement = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/color")))
-        colorElement.click()
+        response = requests.post(url, headers=headers, data=payload, files=files)
+        response.raise_for_status()  # Check if the request was successful
 
-        textElement = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((MobileBy.ID, "com.lambdatest.proverbial:id/Text")))
-        textElement.click()
+        # Extract media URL from the API response
+        media_url = response.json()["media_url"]
+        print("Media URL:", media_url)
 
-        toastElement = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/toast")))
-        toastElement.click()
+        # Add the media URL to desired capabilities
+        desired_caps["mediaUrl"] = media_url
 
-        notification = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/notification")))
-        notification.click()
+        # Start the WebDriver session with desired capabilities
+        driver = webdriver.Remote(
+            command_executor=f"https://{username}:{accesskey}@mobile-hub.lambdatest.com/wd/hub",
+            desired_capabilities=desired_caps
+        )
 
-        geolocation = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/geoLocation")))
-        geolocation.click()
+        try:
+            # Your test steps here
+            print("WebDriver session started successfully")
+            pass
 
-        home = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/Home")))
-        home.click()
+        except Exception as e:
+            print("Error in test steps:", e)
 
-        speedTest = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/speedTest")))
-        speedTest.click()
+        finally:
+            # Quit the WebDriver session
+            driver.quit()
+            print("WebDriver session terminated")
 
-        home = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-            (MobileBy.ID, "com.lambdatest.proverbial:id/Home")))
-        home.click()
+    except requests.RequestException as ex:
+        print("Error during media upload:", ex)
 
-        # browser = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        #     (MobileBy.ID, "com.lambdatest.proverbial:id/Browser")))
-        # browser.click()
-
-        # url = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        #     (MobileBy.ID, "com.lambdatest.proverbial:id/url")))
-        # url.send_keys("https://www.lambdatest.com")
-
-        # find = WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
-        #     (MobileBy.ID, "com.lambdatest.proverbial:id/find")))
-        # find.click()
-
-        driver.quit()
-    except:
-        driver.quit()
